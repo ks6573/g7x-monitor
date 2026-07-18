@@ -1,26 +1,34 @@
 class G7xMonitor < Formula
   desc "Alerts when the Canon PowerShot G7X Mark III restocks at MSRP"
-  homepage "https://github.com/YOUR_USER/g7x-monitor"
-  # Replace both of these after you cut a release (see packaging/HOMEBREW.md):
-  url "https://github.com/YOUR_USER/g7x-monitor/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "REPLACE_WITH_TARBALL_SHA256"
+  homepage "https://github.com/ks6573/g7x-monitor"
+  url "https://github.com/ks6573/g7x-monitor/archive/refs/tags/v1.0.0.tar.gz"
+  sha256 "a888ba73939a9b10ec56bae18efef743e7d932681b6c440d0b2ab21baeaf4851"
   license "MIT"
 
   depends_on "python@3.12"
   depends_on :macos
 
   def install
+    # Copy the app. The Python venv is created on first run (Homebrew's build
+    # sandbox has no network, so we can't pip-install here).
     libexec.install "config.py", "monitor.py", "decision.py", "state.py",
                     "alert.py", "requirements.txt", "checkers"
-    system "python3", "-m", "venv", libexec/"venv"
-    system libexec/"venv/bin/pip", "install", "--quiet", "playwright"
 
-    # Wrapper: writable data dir + keep the Mac awake while running.
+    python = Formula["python@3.12"].opt_bin/"python3.12"
     (bin/"g7x-monitor").write <<~SH
       #!/bin/bash
-      export G7X_DATA_DIR="$HOME/Library/Application Support/g7x-monitor"
-      mkdir -p "$G7X_DATA_DIR"
-      exec /usr/bin/caffeinate -i "#{libexec}/venv/bin/python" "#{libexec}/monitor.py"
+      set -e
+      DATA="$HOME/Library/Application Support/g7x-monitor"
+      VENV="$DATA/venv"
+      mkdir -p "$DATA"
+      if [ ! -x "$VENV/bin/python" ]; then
+        echo "First run: setting up Python environment (about a minute)..." >&2
+        "#{python}" -m venv "$VENV"
+        "$VENV/bin/pip" install --quiet --upgrade pip
+        "$VENV/bin/pip" install --quiet playwright
+      fi
+      export G7X_DATA_DIR="$DATA"
+      exec /usr/bin/caffeinate -i "$VENV/bin/python" "#{libexec}/monitor.py"
     SH
   end
 
@@ -36,6 +44,7 @@ class G7xMonitor < Formula
       Requires Google Chrome in /Applications.
         Start:  brew services start g7x-monitor
         Stop:   brew services stop g7x-monitor
+      The first start installs a small Python environment and may take a minute.
       Alerts are local macOS notifications; the Mac must be awake to fire them.
     EOS
   end

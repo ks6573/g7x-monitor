@@ -1,45 +1,41 @@
 # Homebrew distribution
 
-> **TL;DR:** The double-click **`dist/Install-G7X-Monitor.command`** needs no
-> hosting and is the easiest way to share this. Homebrew is only worth it if you
-> want `brew install` — and brew *requires* the code to live at a public URL, so
-> it needs a one-time GitHub (or other host) setup.
-
-## Why brew needs hosting
-
-A Homebrew formula downloads a release tarball from a `url` and verifies its
-`sha256`. There's no way around hosting that tarball somewhere public. The
-formula in `g7x-monitor.rb` is complete except for those two lines.
-
-## One-time publish
-
-1. Put this project in a public GitHub repo, e.g. `YOUR_USER/g7x-monitor`.
-2. Cut a release tag:
-   ```bash
-   git tag v1.0.0 && git push origin v1.0.0
-   ```
-3. Get the tarball's checksum:
-   ```bash
-   curl -sL https://github.com/YOUR_USER/g7x-monitor/archive/refs/tags/v1.0.0.tar.gz \
-     | shasum -a 256
-   ```
-4. In `g7x-monitor.rb`, replace `YOUR_USER`, the `url`, and the `sha256`.
-5. Create a **tap** repo named `homebrew-tap` (also public) and drop
-   `g7x-monitor.rb` into its `Formula/` folder.
-
-## Then anyone installs with
+The monitor is published as a Homebrew tap. Anyone on macOS can install it with:
 
 ```bash
-brew tap YOUR_USER/tap
+brew tap ks6573/tap
 brew install g7x-monitor
-brew services start g7x-monitor      # runs it in the background
+brew services start g7x-monitor      # run it in the background
 ```
 
-`brew services stop g7x-monitor` stops it. Data (state, logs, Chrome profile)
-lives in `~/Library/Application Support/g7x-monitor` via the `G7X_DATA_DIR`
-override, so the read-only Homebrew prefix is never written to.
+Stop / remove:
 
-## Requirements for end users
+```bash
+brew services stop g7x-monitor
+brew uninstall g7x-monitor
+```
 
-- macOS + **Google Chrome** in `/Applications`
-- Homebrew (`python@3.12` is pulled in automatically)
+Requirements: macOS + **Google Chrome** in `/Applications` (`python@3.12` is
+pulled in automatically). Data (state, logs, Chrome profile, and the Python
+environment) lives in `~/Library/Application Support/g7x-monitor` via the
+`G7X_DATA_DIR` override, so Homebrew's read-only prefix is never written to.
+The first `brew services start` builds the Python environment and can take a
+minute.
+
+## How it's wired
+
+- **App repo:** https://github.com/ks6573/g7x-monitor — tagged releases; the
+  formula's `url` points at the release tarball, pinned by `sha256`.
+- **Tap repo:** `ks6573/homebrew-tap` holds `Formula/g7x-monitor.rb`
+  (`brew tap ks6573/tap` maps to `ks6573/homebrew-tap`).
+
+## Cutting a new version
+
+```bash
+git tag v1.1.0 && git push origin v1.1.0
+curl -sL https://github.com/ks6573/g7x-monitor/archive/refs/tags/v1.1.0.tar.gz \
+  | shasum -a 256
+```
+
+Update `url` + `sha256` in `g7x-monitor.rb`, then push it to the tap repo's
+`Formula/` folder.
