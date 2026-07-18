@@ -1,8 +1,8 @@
 class G7xMonitor < Formula
   desc "Alerts when the Canon PowerShot G7X Mark III restocks at MSRP"
   homepage "https://github.com/ks6573/g7x-monitor"
-  url "https://github.com/ks6573/g7x-monitor/archive/refs/tags/v1.1.0.tar.gz"
-  sha256 "9f7570173ab99c848fa6efa3b77339ed1adf46007ceeba64ddbc970154605047"
+  url "https://github.com/ks6573/g7x-monitor/archive/refs/tags/v1.2.0.tar.gz"
+  sha256 "18a9b2086825447504a0dd8daa2a403f53847e9decef34cdbe0c5f46ee62754b"
   license "MIT"
 
   depends_on "python@3.12"
