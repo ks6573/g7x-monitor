@@ -17,7 +17,8 @@ COPYFILE_DISABLE=1 tar czf "$TARBALL" -C "$SRC" \
   checkers/__init__.py checkers/base.py checkers/util.py \
   checkers/canon.py checkers/bestbuy.py checkers/bhphoto.py \
   checkers/target.py checkers/adorama.py checkers/amazon.py \
-  requirements.txt README.md com.g7xmonitor.agent.plist
+  requirements.txt README.md com.g7xmonitor.agent.plist \
+  Stop-G7X-Monitor.command Start-G7X-Monitor.command
 
 # 2) Emit the installer: header + embedded base64 payload + footer.
 cat > "$OUT" <<'HEADER'
@@ -85,11 +86,12 @@ if [ "${G7X_DRY_RUN:-0}" = "1" ]; then
 fi
 
 echo "  - Installing background service..."
+chmod +x "$INSTALL_DIR"/*.command 2>/dev/null || true
 sed "s|__PROJECT_DIR__|$INSTALL_DIR|g" \
     "$INSTALL_DIR/com.g7xmonitor.agent.plist" > "$LA_DIR/$LABEL.plist"
+launchctl enable "gui/$UID_NUM/$LABEL" 2>/dev/null || true
 launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$UID_NUM" "$LA_DIR/$LABEL.plist"
-launchctl enable "gui/$UID_NUM/$LABEL"
 
 echo ""
 echo "  ok  Installed and running. It checks every ~2-3 minutes and alerts you"
@@ -97,8 +99,9 @@ echo "      (loud banner + sound + speech) the moment the G7X III is in stock"
 echo "      at MSRP."
 echo ""
 echo "      Watch it:   tail -f \"$INSTALL_DIR/logs/monitor.log\""
-echo "      Uninstall:  double-click Uninstall-G7X-Monitor.command in"
-echo "                  $INSTALL_DIR"
+echo "      Pause it:   double-click Stop-G7X-Monitor.command  (in $INSTALL_DIR)"
+echo "      Resume it:  double-click Start-G7X-Monitor.command"
+echo "      Uninstall:  double-click Uninstall-G7X-Monitor.command"
 echo ""
 read -r -p "  Press return to close. " _ || true
 FOOTER

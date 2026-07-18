@@ -115,6 +115,28 @@ limit — stopped`. This is for manual/foreground runs; the background service
 the Mac awake on its own — prefix `caffeinate -i` if you want that:
 `caffeinate -i .venv/bin/python monitor.py --hours 3`.
 
+## Stopping & pausing
+
+**Homebrew:**
+
+```bash
+brew services stop g7x-monitor     # pause — stays off, even after a reboot
+brew services start g7x-monitor    # resume
+```
+
+**Installer / from source** — double-click (or run) these for a real pause that
+survives a reboot, without uninstalling:
+
+- **`Stop-G7X-Monitor.command`** — pause it
+- **`Start-G7X-Monitor.command`** — resume it
+
+They sit in the install folder (`~/Library/Application Support/g7x-monitor` for
+the installer, or the project root from source). Under the hood they use
+`launchctl disable`/`enable`, so the pause persists across logins — unlike a bare
+`launchctl bootout`, which the `KeepAlive` service simply undoes at the next
+login. To remove it entirely instead of pausing, use `uninstall.sh` /
+`Uninstall-G7X-Monitor.command`.
+
 ## Tuning (`config.py`)
 
 - `MSRP_CEILING` — alert threshold. `879.99` is the current MSRP. Bump to

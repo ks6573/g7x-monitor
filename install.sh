@@ -30,10 +30,10 @@ mkdir -p "$LA_DIR" "$PROJECT_DIR/logs"
 sed "s|__PROJECT_DIR__|$PROJECT_DIR|g" "$PROJECT_DIR/$LABEL.plist" > "$PLIST_DST"
 echo "==> Wrote $PLIST_DST"
 
-# 4) (Re)load and start.
+# 4) (Re)load and start. Enable first, in case it was paused (disabled) before.
+launchctl enable "gui/$UID_NUM/$LABEL" 2>/dev/null || true
 launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$UID_NUM" "$PLIST_DST"
-launchctl enable "gui/$UID_NUM/$LABEL"
 
 echo "==> Installed and started."
 echo "    Live log:    tail -f \"$PROJECT_DIR/logs/monitor.log\""
