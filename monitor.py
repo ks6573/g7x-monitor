@@ -6,6 +6,7 @@ re-alerting periodically while a qualifying listing stays up. `run_cycle` is a
 pure-ish seam (checkers/alerts/clock injected) so the loop wiring is unit
 tested without a live browser.
 """
+import argparse
 import importlib
 import random
 import time
@@ -16,6 +17,33 @@ from decision import qualifies
 from state import load_state, save_state, should_alert, record
 from alert import build_alert, notify
 from checkers.base import error_result
+
+
+def _positive_hours(value):
+    hours = float(value)
+    if hours <= 0:
+        raise argparse.ArgumentTypeError("hours must be greater than 0")
+    return hours
+
+
+def parse_args(argv=None):
+    p = argparse.ArgumentParser(
+        prog="g7x-monitor",
+        description="Watch retailers for the Canon G7X Mark III and alert on "
+                    "macOS when it is in stock at MSRP.")
+    p.add_argument("--hours", type=_positive_hours, default=None, metavar="N",
+                   help="Run for N hours, then stop (e.g. --hours 3, or --hours 1.5). "
+                        "Omit to run until stopped.")
+    return p.parse_args(argv)
+
+
+def compute_deadline(hours, start_now):
+    """Epoch second at which to stop, or None to run forever."""
+    return None if hours is None else start_now + hours * 3600
+
+
+def is_expired(deadline, now):
+    return deadline is not None and now >= deadline
 
 
 def run_cycle(context, checkers, state, *, now, alert_fn, ceiling,
@@ -80,16 +108,19 @@ def _build_checkers():
     return checkers
 
 
-def main():
+def main(argv=None):
     from playwright.sync_api import sync_playwright
 
+    args = parse_args(argv)
     checkers = _build_checkers()
     state = load_state(config.STATE_PATH)
-    print(f"{datetime.now():%Y-%m-%d %H:%M:%S} monitor starting — "
+    deadline = compute_deadline(args.hours, time.time())
+    window = f"for {args.hours:g}h" if args.hours else "until stopped"
+    print(f"{datetime.now():%Y-%m-%d %H:%M:%S} monitor starting ({window}) — "
           f"{[c['name'] for c in checkers]} ceiling=${config.MSRP_CEILING}", flush=True)
 
     with sync_playwright() as p:
-        while True:  # outer loop: (re)launch the browser after a crash
+        while not is_expired(deadline, time.time()):  # outer: relaunch after a crash
             try:
                 context = p.chromium.launch_persistent_context(
                     str(config.USER_DATA_DIR),
@@ -109,7 +140,7 @@ def main():
             context.on("close", lambda: disconnected.__setitem__("v", True))
             all_error_streak = 0
             try:
-                while True:
+                while not is_expired(deadline, time.time()):
                     results = run_cycle(
                         context, checkers, state,
                         now=time.time(), alert_fn=_alert,
@@ -129,8 +160,10 @@ def main():
                               f"all_error_streak={all_error_streak}); relaunching",
                               flush=True)
                         break
-                    time.sleep(random.uniform(config.CYCLE_MIN_SECONDS,
-                                              config.CYCLE_MAX_SECONDS))
+                    nap = random.uniform(config.CYCLE_MIN_SECONDS, config.CYCLE_MAX_SECONDS)
+                    if deadline is not None:  # don't sleep past the stop time
+                        nap = min(nap, max(0.0, deadline - time.time()))
+                    time.sleep(nap)
             except Exception as e:
                 print(f"{datetime.now():%Y-%m-%d %H:%M:%S} cycle loop crashed: "
                       f"{e}; relaunching browser", flush=True)
@@ -139,7 +172,13 @@ def main():
                     context.close()
                 except Exception:
                     pass
+            if is_expired(deadline, time.time()):
+                break
             time.sleep(10)  # brief backoff before relaunching
+
+    if deadline is not None:
+        print(f"{datetime.now():%Y-%m-%d %H:%M:%S} reached {args.hours:g}h limit — "
+              f"stopped.", flush=True)
 
 
 if __name__ == "__main__":

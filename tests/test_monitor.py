@@ -1,4 +1,4 @@
-from monitor import run_cycle
+from monitor import run_cycle, compute_deadline, is_expired, parse_args
 from checkers.base import Result
 
 CEILING = 879.99
@@ -83,6 +83,45 @@ def test_checker_exception_is_isolated():
     bad = spec("canon", Boom())
     cycle([bad, good], state, 1000, alerts)
     assert len(alerts) == 1                 # good still fired despite bad raising
+
+
+def test_compute_deadline_none_runs_forever():
+    assert compute_deadline(None, 1000.0) is None
+
+
+def test_compute_deadline_from_hours():
+    assert compute_deadline(2, 1000.0) == 1000.0 + 7200
+
+
+def test_compute_deadline_fractional_hours():
+    assert compute_deadline(0.5, 0.0) == 1800.0
+
+
+def test_is_expired_no_deadline():
+    assert is_expired(None, 10 ** 12) is False
+
+
+def test_is_expired_before_deadline():
+    assert is_expired(1000.0, 999.0) is False
+
+
+def test_is_expired_at_or_after_deadline():
+    assert is_expired(1000.0, 1000.0) is True
+    assert is_expired(1000.0, 1001.0) is True
+
+
+def test_parse_args_default_hours_is_none():
+    assert parse_args([]).hours is None
+
+
+def test_parse_args_hours():
+    assert parse_args(["--hours", "3"]).hours == 3.0
+
+
+def test_parse_args_rejects_nonpositive_hours():
+    import pytest
+    with pytest.raises(SystemExit):
+        parse_args(["--hours", "0"])
 
 
 def test_run_cycle_returns_results_for_health_check():

@@ -28,7 +28,7 @@ class G7xMonitor < Formula
         "$VENV/bin/pip" install --quiet playwright
       fi
       export G7X_DATA_DIR="$DATA"
-      exec /usr/bin/caffeinate -i "$VENV/bin/python" "#{libexec}/monitor.py"
+      exec /usr/bin/caffeinate -i "$VENV/bin/python" "#{libexec}/monitor.py" "$@"
     SH
   end
 

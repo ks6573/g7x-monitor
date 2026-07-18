@@ -99,6 +99,22 @@ cat .state/state.json               # last-seen status per retailer
 An alert is a banner + repeated system sound + a spoken announcement. When you
 hear "Canon G7X in stock at <retailer> for 879 dollars", go buy it.
 
+## Run it yourself for a set time
+
+Run the script directly and cap how long it watches with `--hours`:
+
+```bash
+.venv/bin/python monitor.py --hours 3      # watch for 3 hours, then stop
+.venv/bin/python monitor.py --hours 1.5    # fractional hours are fine
+.venv/bin/python monitor.py                # run until you quit (Ctrl-C)
+```
+
+It prints `monitor starting (for 3h)` and, when the window elapses, `reached 3h
+limit — stopped`. This is for manual/foreground runs; the background service
+(launchd or `brew services`) always runs continuously. A manual run doesn't keep
+the Mac awake on its own — prefix `caffeinate -i` if you want that:
+`caffeinate -i .venv/bin/python monitor.py --hours 3`.
+
 ## Tuning (`config.py`)
 
 - `MSRP_CEILING` — alert threshold. `879.99` is the current MSRP. Bump to
